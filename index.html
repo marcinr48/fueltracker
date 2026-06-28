@@ -732,33 +732,48 @@ async function syncWithCloud() {
       fetch(SCRIPT_URL + '?type=fuel&pin=' + correctPin),
       fetch(SCRIPT_URL + '?type=budget&pin=' + correctPin)
     ]);
+    
+    if (!fuelRes.ok || !budgetRes.ok) {
+      alert("Błąd odpowiedzi HTTP: fuel=" + fuelRes.status + ", budget=" + budgetRes.status);
+    }
+    
     const [cloudFuel, cloudBudget] = await Promise.all([fuelRes.json(), budgetRes.json()]);
+
+    if (cloudFuel && cloudFuel.status === "error") {
+      alert("Błąd z chmury (paliwo): " + cloudFuel.message);
+      return;
+    }
+    if (cloudBudget && cloudBudget.status === "error") {
+      alert("Błąd z chmury (budżet): " + cloudBudget.message);
+      return;
+    }
 
     const validCloudData = cloudFuel.filter(d => d.id);
     if (validCloudData.length > 0) {
       fuelData = validCloudData.map(d => ({
         id: parseInt(d.id),
-        date: String(d.date).split('T')[0],
+        date: d.date ? d.date.split('T')[0] : '',
         time: formatTime(d.time),
         station: d.station || '',
         product: normalizeProduct(d.product),
-        liters: parseFloat(d.liters) || 0,
-        amount: parseFloat(d.amount) || 0,
-        ppl: parseFloat(d.ppl) || 0
+        liters: parseFloat(d.liters || 0),
+        amount: parseFloat(d.amount || 0),
+        ppl: parseFloat(d.ppl || 0)
       }));
       nextId = Math.max(...fuelData.map(f => f.id), 0) + 1;
     }
 
-    if (cloudBudget.length > 0) {
+    if (Array.isArray(cloudBudget)) {
       budgetData = cloudBudget.map(b => ({
-        month: b.month,
-        amount: parseFloat(b.amount) || 0
+        month: b.month || '',
+        amount: parseFloat(b.amount || 0)
       }));
     }
 
     saveLocally();
     renderAll();
   } catch (err) {
+    alert("Błąd pobierania danych z chmury: " + err.toString());
     console.log("Działamy offline na danych lokalnych.", err);
   }
 }
