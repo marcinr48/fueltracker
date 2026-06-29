@@ -709,12 +709,29 @@ function formatTime(t) {
   return t.substring(0, 5);
 }
 
+function formatBudgetMonth(m) {
+  if (!m) return "";
+  m = String(m);
+  if (m.includes('T')) {
+    const d = new Date(m);
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${month}/${day}`;
+  }
+  return m;
+}
+
 fuelData = fuelData.map(f => {
   f.product = normalizeProduct(f.product);
   f.time = formatTime(f.time);
   if (f.date && f.date.includes('T')) f.date = f.date.split('T')[0];
   return f;
 });
+
+budgetData = budgetData.map(b => ({
+  month: formatBudgetMonth(b.month),
+  amount: parseFloat(b.amount || 0)
+}));
 
 let nextId = Math.max(...fuelData.map(f => f.id), 0) + 1;
 let activeFilter = 'all';
@@ -765,7 +782,7 @@ async function syncWithCloud() {
 
     if (Array.isArray(cloudBudget)) {
       budgetData = cloudBudget.map(b => ({
-        month: b.month || '',
+        month: formatBudgetMonth(b.month),
         amount: parseFloat(b.amount || 0)
       }));
     }
